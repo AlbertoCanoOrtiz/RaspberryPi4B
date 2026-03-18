@@ -28,11 +28,11 @@ spec:
             - name: PROVISIONER_NAME
               value: k8s-sigs.io/nfs-subdir-external-provisioner
             - name: NFS_SERVER
-              value: 192.168.0.6
+              value: 192.168.2.108
             - name: NFS_PATH
               value: /mnt/nfsShare/
       volumes:
         - name: nfs-client-root
           nfs:
-            server: 192.168.0.6
+            server: 192.168.2.108
             path: /mnt/nfsShare/
