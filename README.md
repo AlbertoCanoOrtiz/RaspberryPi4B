@@ -119,3 +119,74 @@ chmod 600 ~/.kube/config
 
 kubectl get nodes
 ```
+
+
+# 🔧 Workflow to Create Custom Kubeconfigs
+
+## 1. Generate certificates for each user
+
+On the master node:
+
+```Bash
+# Levy
+openssl genrsa -out levy.key 2048
+openssl req -new -key levy.key -out levy.csr -subj "/CN=levy/O=levy"
+sudo openssl x509 -req -in levy.csr -CA /etc/kubernetes/pki/ca.crt \
+  -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out levy.crt -days 365
+```
+
+```Bash
+# Spark
+openssl genrsa -out spark.key 2048
+openssl req -new -key spark.key -out spark.csr -subj "/CN=spark/O=spark"
+sudo openssl x509 -req -in spark.csr -CA /etc/kubernetes/pki/ca.crt \
+  -CAkey /etc/kubernetes/pki/ca.key -CAcreateserial -out spark.crt -days 365
+```
+
+## 2. Add users to kubeconfig
+
+```Bash
+# Levy
+kubectl config set-credentials levy \
+  --client-certificate=levy.crt --client-key=levy.key
+kubectl config set-context levy-context \
+  --cluster=kubernetes --namespace=default --user=levy
+```
+
+```Bash
+# Spark
+kubectl config set-credentials spark \
+  --client-certificate=spark.crt --client-key=spark.key
+kubectl config set-context spark-context \
+  --cluster=kubernetes --namespace=default --user=spark
+```
+
+## 3. Export separate kubeconfig files
+
+```Bash
+kubectl config view --minify --flatten --context=levy-context > config-levy
+kubectl config view --minify --flatten --context=spark-context > config-spark
+```
+
+Now you have:
+
+config-levy
+
+config-spark
+
+## 4. Distribute configs
+
+Copy them to the respective client machines:
+
+```Bash
+scp config-levy levy@client-machine:~/.kube/config
+scp config-spark spark@client-machine:~/.kube/config
+```
+
+## 5. Verify
+
+On each client machine:
+
+```Bash
+kubectl get nodes --kubeconfig ~/.kube/config
+```
